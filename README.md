@@ -1,6 +1,6 @@
 # SRT4U
 EN CLARO DESARROLLO
 
-Simplemente una app que coge un SRT (archivo de subtítulo) y te permite traducirlo y arreglarlo.
-Se está desarrollando con la ayuda de Meta-Llama-3.1-405B-Instruct.
-Para la interfaz se está usando la asistencia de Claude3.5 Sonnet
+Simplemente una app que coge un SRT (archivo de subtítulo) y te permite traducirlo y/o arreglarlo.
+
+Aplicación creada por mí con la asistencia de Llama3.1-405B y Claude3.5 Sonnet.

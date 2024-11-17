@@ -5,6 +5,9 @@ import tkinter as tk
 from tkinter import filedialog
 import tempfile
 import shutil
+import asyncio
+from threading import Thread
+from queue import Queue
 
 archivo_srt_path = None
 directorio_destino = None
@@ -14,42 +17,83 @@ def on_upload(e):
     """Maneja el evento de subida de archivo"""
     global archivo_srt_path
 
-    # Crear un directorio temporal si no existe
-    temp_dir = os.path.join(tempfile.gettempdir(), 'srt4u')
-    os.makedirs(temp_dir, exist_ok=True)
+    archivo_label.text = '⏳ Subiendo archivo...'
 
-    # Guardar el archivo temporal con su nombre original
-    temp_path = os.path.join(temp_dir, e.name)
-    with open(temp_path, 'wb') as f:
-        shutil.copyfileobj(e.content, f)
+    try:
+        temp_dir = os.path.join(tempfile.gettempdir(), 'srt4u')
+        os.makedirs(temp_dir, exist_ok=True)
 
-    archivo_srt_path = temp_path
-    archivo_label.text = f'Archivo seleccionado: {e.name}'
-    print(f"Archivo seleccionado: {archivo_srt_path}")  # Debug
+        temp_path = os.path.join(temp_dir, e.name)
+        with open(temp_path, 'wb') as f:
+            shutil.copyfileobj(e.content, f)
+
+        archivo_srt_path = temp_path
+        archivo_label.text = f'✅ Archivo seleccionado: {e.name}'
+        ui.notify('Archivo subido correctamente', type='positive')
+        print(f"Archivo seleccionado: {archivo_srt_path}")
+
+    except Exception as e:
+        archivo_label.text = '❌ Error al subir el archivo'
+        ui.notify(f'Error al subir el archivo: {str(e)}', type='negative')
 
 
 def seleccionar_directorio():
     """Abre el diálogo para seleccionar directorio de destino"""
+    directorio_label.text = '⏳ Seleccionando directorio...'
+
     root = tk.Tk()
-    root.withdraw()  # Ocultar la ventana principal de tkinter
+    root.withdraw()
     directorio = filedialog.askdirectory()
     root.destroy()
 
     if directorio:
         global directorio_destino
         directorio_destino = directorio
-        directorio_label.text = f'Directorio destino: {directorio}'
-        print(f"Directorio seleccionado: {directorio_destino}")  # Debug
+        directorio_label.text = f'✅ Directorio destino: {directorio}'
+        ui.notify('Directorio seleccionado correctamente', type='positive')
+        print(f"Directorio seleccionado: {directorio_destino}")
         return directorio
+    else:
+        directorio_label.text = 'Ningún directorio seleccionado'
     return None
 
 
-def procesar():
+def proceso_en_segundo_plano(archivo, traducir, idioma_destino, queue):
+    """Ejecuta el proceso de traducción en segundo plano"""
+    try:
+        texto_procesado = app.procesar_archivo_srt(archivo, traducir, idioma_destino)
+        queue.put(('progress', 0.3))
+
+        bloques = app.procesar_bloques(app.dividir_en_bloques(texto_procesado))
+        queue.put(('progress', 0.6))
+
+        texto_final = app.devolver_formato(bloques)
+        queue.put(('progress', 0.8))
+
+        queue.put(('success', texto_final))
+    except Exception as e:
+        queue.put(('error', str(e)))
+
+
+async def actualizar_progreso(progress_bar, estado_label, queue):
+    """Actualiza el progreso en la interfaz"""
+    while True:
+        try:
+            msg_type, data = queue.get_nowait()
+            if msg_type == 'progress':
+                progress_bar.value = data
+            elif msg_type == 'status':
+                estado_label.text = data
+            elif msg_type in ['success', 'error']:
+                return msg_type, data
+        except:
+            await asyncio.sleep(0.1)
+            continue
+
+
+async def procesar():
     """Procesa el archivo seleccionado"""
     global archivo_srt_path, directorio_destino
-
-    print(f"Verificando archivo: {archivo_srt_path}")  # Debug
-    print(f"Verificando directorio: {directorio_destino}")  # Debug
 
     if not archivo_srt_path:
         ui.notify('Por favor, seleccione un archivo primero', type='warning')
@@ -67,27 +111,52 @@ def procesar():
         return
 
     try:
-        texto_procesado = app.procesar_archivo_srt(archivo_srt_path, traducir, idioma_destino)
-        bloques = app.procesar_bloques(app.dividir_en_bloques(texto_procesado))
-        texto_final = app.devolver_formato(bloques)
+        # Desactivar el botón y mostrar progreso
+        boton_procesar.disable()
+        progress.visible = True
+        estado_proceso.text = '⏳ Procesando archivo...'
+
+        # Cola para comunicación entre hilos
+        queue = Queue()
+
+        # Iniciar proceso en segundo plano
+        thread = Thread(target=proceso_en_segundo_plano,
+                        args=(archivo_srt_path, traducir, idioma_destino, queue))
+        thread.start()
+
+        # Esperar resultados mientras actualizamos la interfaz
+        result_type, result_data = await actualizar_progreso(progress, estado_proceso, queue)
+
+        if result_type == 'error':
+            raise Exception(result_data)
 
         # Crear nombre del archivo de salida
         nombre_original = os.path.basename(archivo_srt_path)
         nombre_base, extension = os.path.splitext(nombre_original)
         nombre_salida = f"{nombre_base}_procesado{extension}"
-
-        # Ruta completa del archivo de salida
         output_path = os.path.join(directorio_destino, nombre_salida)
 
-        # Guardar el texto procesado en el archivo
+        # Guardar el texto procesado
         with open(output_path, "w", encoding='UTF-8') as f:
-            f.write(texto_final)
+            f.write(result_data)
 
+        progress.value = 1.0
+        estado_proceso.text = '✅ Proceso completado'
         ui.notify('El archivo ha sido procesado con éxito', type='positive')
-        resultado_label.text = f'Archivo guardado en: {output_path}'
+        resultado_label.text = f'✅ Archivo guardado en: {output_path}'
 
     except Exception as e:
+        estado_proceso.text = '❌ Error en el proceso'
         ui.notify(f'Error al procesar el archivo: {str(e)}', type='negative')
+        resultado_label.text = f'❌ Error: {str(e)}'
+
+    finally:
+        # Reactivar el botón después de una pequeña pausa
+        await asyncio.sleep(2)
+        boton_procesar.enable()
+        progress.visible = False
+        if estado_proceso.text == '✅ Proceso completado':
+            estado_proceso.text = ''
 
 
 # Interfaz de usuario
@@ -119,8 +188,13 @@ with ui.card().classes('w-full max-w-3xl mx-auto p-4'):
             placeholder='es, en, fr, etc.'
         ).props('outlined dense')
 
+    # Barra de progreso y estado
+    progress = ui.linear_progress(value=0).classes('w-full mt-4')
+    progress.visible = False
+    estado_proceso = ui.label('').classes('text-sm text-gray-600 mt-2')
+
     # Botón de procesamiento
-    ui.button('Procesar', on_click=procesar).classes('mt-4')
+    boton_procesar = ui.button('Procesar', on_click=procesar).classes('mt-4')
 
     # Etiqueta para mostrar el resultado
     resultado_label = ui.label('').classes('mt-4 text-sm')
