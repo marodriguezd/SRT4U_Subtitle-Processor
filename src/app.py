@@ -1,23 +1,32 @@
-import re
+import re, os
 from deep_translator import GoogleTranslator
 
 # Configuración
-SPAM_PATTERNS = ["Subtitled by", '-♪ <font color="green">online</font>-<font color="red">courses</font>.<font color="yellow">club</font> ♪-', "We compress knowledge for you!", "https://t.me/joinchat/ailxpXoW3JVjYzQ1"]  # Agregar patrones de spam aquí
-IDIOMA_ORIGEN = "en"  # Idioma origen (inglés)
-IDIOMA_DESTINO = "es"  # Idioma destino (español)
+SPAM_PATTERNS = [
+    r"Subtitled by",
+    r'-♪ <font color="green">online</font>-<font color="red">courses</font>.<font color="yellow">club</font> ♪-', "We compress knowledge for you!",
+    r"https://t.me/joinchat/ailxpXoW3JVjYzQ1",
+    r"Subtitled\s*by",  # Busca "Subtitled by" con espacios opcionales
+    r"https?://[^\s]+",  # Busca URLs que comienzan con "http" o "https"
+    r"♪",  # Busca el símbolo de la música
+    r"We\s*compress\s*knowledge\s*for\s*you!",  # Busca la frase con espacios opcionales
+    r"online|courses|club",  # Busca las palabras "online", "courses" o "club"
+    r"<font.*?>.*?<\/font>",  # Busca etiquetas de fuente que contengan texto
+    r"\bjoinchat\b",  # Busca la palabra "joinchat" como palabra completa
+]   # Agregar patrones de spam aquí
 
 def eliminar_spam(texto):
     for patron in SPAM_PATTERNS:
-        texto = re.sub(patron, "", texto)
+        texto = re.sub(patron, "", texto, flags=re.IGNORECASE)
     return texto
 
-def traducir_texto(texto):
-    translator = GoogleTranslator(source=IDIOMA_ORIGEN, target=IDIOMA_DESTINO)
+def traducir_texto(texto, idioma_destino):
+    translator = GoogleTranslator(source="auto", target=idioma_destino)
     traduccion = translator.translate(texto)
     print(traduccion)
     return traduccion
 
-def procesar_archivo_srt(archivo_srt):
+def procesar_archivo_srt(archivo_srt, traducir, idioma_destino):
     with open(archivo_srt, "r", encoding='UTF-8') as f:
         lineas = f.readlines()
 
@@ -25,8 +34,10 @@ def procesar_archivo_srt(archivo_srt):
     for linea in lineas:
         linea = eliminar_spam(linea)
         if linea.strip():  # Si la línea no está vacía
-            texto_procesado.append(traducir_texto(linea))
-            #texto_procesado.append(linea)
+            if traducir:
+                texto_procesado.append(traducir_texto(linea, idioma_destino))
+            else:
+                texto_procesado.append(linea)
 
     # Agregar un retorno de carro antes de cada número de línea
     texto_procesado_con_saltos = []
@@ -75,14 +86,28 @@ def devolver_formato(bloques):
 
     return texto_final.rstrip()
 
-# Ejemplo de uso
-if __name__ == "__main__":
-    archivo_srt = "../resources/example.srt"
-    texto_procesado = procesar_archivo_srt(archivo_srt).lstrip()
-    bloques = procesar_bloques(dividir_en_bloques(texto_procesado))
+def main():
+    print("Bienvenido a la aplicación de procesamiento de subtítulos")
+    archivo_srt = input("Ingrese el nombre del archivo SRT: ")
+    traducir = input("¿Desea traducir el archivo? (s/n): ")
+    if traducir.lower() == "s":
+        idioma_destino = input("Ingrese el idioma destino (es, en, fr, etc.): ")
+        texto_procesado = procesar_archivo_srt(archivo_srt, True, idioma_destino)
+    else:
+        texto_procesado = procesar_archivo_srt(archivo_srt, False, None)
 
+    bloques = procesar_bloques(dividir_en_bloques(texto_procesado))
     texto_final = devolver_formato(bloques)
 
+    # Crear la carpeta si no existe
+    if not os.path.exists("../outputs"):
+        os.makedirs("../outputs")
+
     # Guardar el texto procesado en un archivo
-    with open("../resources/output.srt", "w", encoding='UTF-8') as f:
+    with open("../outputs/output.srt", "w", encoding='UTF-8') as f:
         f.write(texto_final)
+
+    print("El archivo ha sido procesado con éxito")
+
+if __name__ == "__main__":
+    main()
