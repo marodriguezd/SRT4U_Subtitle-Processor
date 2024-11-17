@@ -8,6 +8,7 @@ import shutil
 import asyncio
 from threading import Thread
 from queue import Queue
+from typing import Optional, Dict
 
 archivo_srt_path = None
 directorio_destino = None
@@ -30,7 +31,6 @@ def on_upload(e):
         archivo_srt_path = temp_path
         archivo_label.text = f'✅ Archivo seleccionado: {e.name}'
         ui.notify('Archivo subido correctamente', type='positive')
-        print(f"Archivo seleccionado: {archivo_srt_path}")
 
     except Exception as e:
         archivo_label.text = '❌ Error al subir el archivo'
@@ -51,41 +51,60 @@ def seleccionar_directorio():
         directorio_destino = directorio
         directorio_label.text = f'✅ Directorio destino: {directorio}'
         ui.notify('Directorio seleccionado correctamente', type='positive')
-        print(f"Directorio seleccionado: {directorio_destino}")
         return directorio
     else:
         directorio_label.text = 'Ningún directorio seleccionado'
     return None
 
 
-def proceso_en_segundo_plano(archivo, traducir, idioma_destino, queue):
+def proceso_en_segundo_plano(archivo: str, traducir: bool, idioma_destino: Optional[str], queue: Queue):
     """Ejecuta el proceso de traducción en segundo plano"""
+
+    def progress_callback(tipo: str, datos):
+        queue.put((tipo, datos))
+
     try:
-        texto_procesado = app.procesar_archivo_srt(archivo, traducir, idioma_destino)
-        queue.put(('progress', 0.3))
+        # Procesar archivo
+        texto_procesado = app.procesar_archivo_srt(archivo, traducir, idioma_destino, progress_callback)
+        queue.put(('status', 'Procesando bloques...'))
 
-        bloques = app.procesar_bloques(app.dividir_en_bloques(texto_procesado))
-        queue.put(('progress', 0.6))
+        # Dividir en bloques
+        bloques = app.dividir_en_bloques(texto_procesado, progress_callback)
+        queue.put(('status', 'Optimizando bloques...'))
 
-        texto_final = app.devolver_formato(bloques)
-        queue.put(('progress', 0.8))
+        # Procesar bloques
+        bloques = app.procesar_bloques(bloques, progress_callback)
+        queue.put(('status', 'Generando archivo final...'))
+
+        # Formato final
+        texto_final = app.devolver_formato(bloques, progress_callback)
 
         queue.put(('success', texto_final))
+
     except Exception as e:
         queue.put(('error', str(e)))
 
 
-async def actualizar_progreso(progress_bar, estado_label, queue):
+async def actualizar_progreso(progress_bar, estado_label, queue: Queue):
     """Actualiza el progreso en la interfaz"""
+    info: Dict[str, str] = {}
+
     while True:
         try:
             msg_type, data = queue.get_nowait()
+
             if msg_type == 'progress':
                 progress_bar.value = data
             elif msg_type == 'status':
-                estado_label.text = data
+                estado_label.text = f"⏳ {data}"
+            elif msg_type == 'info':
+                info[msg_type] = data
+                estado_label.text = f"ℹ️ {data}"
+            elif msg_type == 'traduccion':
+                estado_label.text = "🔄 Traduciendo..."
             elif msg_type in ['success', 'error']:
                 return msg_type, data
+
         except:
             await asyncio.sleep(0.1)
             continue
@@ -104,7 +123,7 @@ async def procesar():
         return
 
     traducir = traducir_checkbox.value
-    idioma_destino = idioma_destino_input.value
+    idioma_destino = idioma_destino_input.value if traducir else None
 
     if traducir and not idioma_destino:
         ui.notify('Por favor, ingrese el idioma destino', type='warning')
@@ -114,14 +133,17 @@ async def procesar():
         # Desactivar el botón y mostrar progreso
         boton_procesar.disable()
         progress.visible = True
-        estado_proceso.text = '⏳ Procesando archivo...'
+        progress.value = 0
+        estado_proceso.text = '⏳ Iniciando proceso...'
 
         # Cola para comunicación entre hilos
         queue = Queue()
 
         # Iniciar proceso en segundo plano
-        thread = Thread(target=proceso_en_segundo_plano,
-                        args=(archivo_srt_path, traducir, idioma_destino, queue))
+        thread = Thread(
+            target=proceso_en_segundo_plano,
+            args=(archivo_srt_path, traducir, idioma_destino, queue)
+        )
         thread.start()
 
         # Esperar resultados mientras actualizamos la interfaz
@@ -140,7 +162,6 @@ async def procesar():
         with open(output_path, "w", encoding='UTF-8') as f:
             f.write(result_data)
 
-        progress.value = 1.0
         estado_proceso.text = '✅ Proceso completado'
         ui.notify('El archivo ha sido procesado con éxito', type='positive')
         resultado_label.text = f'✅ Archivo guardado en: {output_path}'
@@ -161,7 +182,9 @@ async def procesar():
 
 # Interfaz de usuario
 with ui.card().classes('w-full max-w-3xl mx-auto p-4'):
-    ui.label('Bienvenido a la aplicación de procesamiento de subtítulos').classes('text-xl mb-4')
+    ui.label('SRT4U - Procesa subtítulos SRT').classes('text-xl mb-4')
+    ui.label('Traduce a otros idiomas y/o limpia spam manteniendo el idioma original').classes(
+        'text-sm text-gray-600 mb-4')
 
     # Selector de archivo
     with ui.column().classes('w-full gap-2'):
