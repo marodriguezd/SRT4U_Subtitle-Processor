@@ -222,4 +222,4 @@ with ui.card().classes('w-full max-w-3xl mx-auto p-4'):
     # Etiqueta para mostrar el resultado
     resultado_label = ui.label('').classes('mt-4 text-sm')
 
-ui.run()
+ui.run(reload=False, port=12537)
