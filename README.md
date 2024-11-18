@@ -29,6 +29,7 @@
 * Python 3.8
 * nicegui
 * deep_translator
+* tkinter
 
 ## Instalación
 
