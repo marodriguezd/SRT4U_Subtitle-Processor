@@ -25,7 +25,7 @@ def eliminar_spam(texto: str) -> str:
         texto (str): El texto a procesar.
 
     Returns:
-        srt: Texto limpio de cualquier patrón coincidente de spam.
+        str: Texto limpio de cualquier patrón coincidente de spam.
     """
     for patron in SPAM_PATTERNS:
         texto = re.sub(patron, "", texto, flags=re.IGNORECASE)
@@ -36,12 +36,12 @@ def traducir_texto(texto: str, idioma_destino: str, progress_callback: Callable 
     """Traduce un texto al idioma especificado utilizando Google Translator.
 
     Args:
-        texto (srt): Texto a traducir.
-        idioma_destino (srt): Código del idioma al que se desea traducir.
+        texto (str): Texto a traducir.
+        idioma_destino (str): Código del idioma al que se desea traducir.
         progress_callback (Callable, opcional): Función de callback para informar progreso.
 
     Returns:
-        srt: Texto traducido.
+        str: Texto traducido.
 
     Raises:
         Exception: Si ocurre un error durante la traducción.
@@ -62,7 +62,7 @@ def contar_subtitulos(texto: str) -> int:
     """Cuenta el número total de subtítulos en un archivo de subtítulos.
 
     Args:
-        texto (srt): El contenido del archivo de subtítulos.
+        texto (str): El contenido del archivo de subtítulos.
 
     Returns:
         int: Número de subtítulos presentes.
@@ -75,12 +75,13 @@ def procesar_archivo_srt(archivo_srt: str, traducir: bool, idioma_destino: str,
     """Procesa un archivo SRT, eliminando spam y traduciendo subtítulos si es necesario.
 
     Args:
-        archivo_srt (srt): Ruta del archivo SRT.
+        archivo_srt (str): Ruta del archivo SRT.
         traducir (bool): Indica si se debe traducir el contenido.
-        idioma_destino (Callable, opcional): Función para manejar actualizaciones de progreso.
+        idioma_destino (str): Código del idioma al que se desea traducir.
+        progress_callback (Callable, opcional): Función para manejar actualizaciones de progreso.
 
     Returns:
-        srt: Contenido procesado del archivo SRT.
+        str: Contenido procesado del archivo SRT.
 
     Raises:
         Exception: Si ocurre un error durante el procesamiento.
@@ -145,11 +146,11 @@ def dividir_en_bloques(texto_procesado: str, progress_callback: Callable = None)
     """Divide el texto procesado en bloques basados en números de subtítulo.
 
     Args:
-        texto_procesado (srt): Texto que ya ha sido procesado.
+        texto_procesado (str): Texto que ya ha sido procesado.
         progress_callback (Callable, opcional): Función de callback para informar progreso.
 
     Returns:
-        List[List[srt]]: Lista de bloques de subtítulos.
+        List[List[str]]: Lista de bloques de subtítulos.
     """
     try:
         bloques = []
@@ -187,11 +188,11 @@ def procesar_bloques(bloques: List[List[str]], progress_callback: Callable = Non
     """Realiza ajustes adicionales en los bloques de subtítulos, como combinar bloques incompletos.
 
     Args:
-        bloques (List[List[srt]]): Lista de bloques a procesar.
+        bloques (List[List[str]]): Lista de bloques a procesar.
         progress_callback (Callable, opcional): Función para manejar actualizaciones de progreso.
 
     Returns:
-        List[List[srt]]: Lista de bloques procesados.
+        List[List[str]]: Lista de bloques procesados.
     """
     try:
         total_bloques = len(bloques)
@@ -220,11 +221,11 @@ def devolver_formato(bloques: List[List[str]], progress_callback: Callable = Non
     """Convierte los bloques de subtítulos procesados nuevamente en un formato de texto.
 
     Args:
-        bloques (List[List[srt]]): Lista de bloques de subtítulos.
+        bloques (List[List[str]]): Lista de bloques de subtítulos.
         progress_callback (Callable, opcional): Función de callback para manejar el progreso.
 
     Returns:
-        srt: El texto formateado en su estructura original.
+        str: El texto formateado en su estructura original.
     """
     try:
         texto_final = ""
