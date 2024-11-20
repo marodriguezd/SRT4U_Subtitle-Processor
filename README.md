@@ -38,7 +38,7 @@
 
 ## Créditos
 
-* Desarrollado por Miguel Ángel (con ayuda de Llama3.1 y Claude3.5)
+* Desarrollado por Miguel Ángel (con ayuda de IAs)
 * Licencia: Apache License 2.0
 
 ## Notas
