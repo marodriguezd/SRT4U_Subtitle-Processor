@@ -19,7 +19,7 @@ SPAM_PATTERNS = [
 
 
 def eliminar_spam(texto: str) -> str:
-    """Elimina cualquier contenido no deseaado o spam del texto según los patrones definidos
+    """Elimina cualquier contenido no deseado o spam del texto según los patrones definidos
 
     Args:
         texto (str): El texto a procesar.
