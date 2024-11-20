@@ -1,6 +1,6 @@
 import os
-import tempfile
 import shutil
+import tempfile
 import tkinter as tk
 from tkinter import filedialog
 
@@ -31,6 +31,12 @@ def select_directory():
     """
     root = tk.Tk()
     root.withdraw()  # Ocultar ventana principal de Tkinter
+
+    # Forzar el enfoque en la ventana para que aparezca en primer plano
+    root.update_idletasks()
+    root.attributes('-topmost', True)
+    root.focus_force()
+
     directorio = filedialog.askdirectory()
     root.destroy()  # Cerrar ventana emergente
 
