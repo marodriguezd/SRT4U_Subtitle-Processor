@@ -3,7 +3,7 @@
 
 ## Traduce a otros idiomas y/o limpia spam manteniendo el idioma original
 
-![Imagen de la interfaz de usuario](https://i.imgur.com/Qu46J7a.png)
+![Imagen de la interfaz de usuario](https://i.imgur.com/QemVmFk.png)
 
 ## Funcionalidades
 
