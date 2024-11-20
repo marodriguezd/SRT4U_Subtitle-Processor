@@ -29,12 +29,11 @@
 * Python 3.8
 * nicegui
 * deep_translator
-* tkinter
 
 ## Instalación
 
 1. Instala las dependencias necesarias: `pip install nicegui deep_translator`
-2. Ejecuta el script: `python gui.py`
+2. Ejecuta el script: `python main.py`
 
 ## Créditos
 
