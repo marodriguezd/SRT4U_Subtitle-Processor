@@ -117,7 +117,7 @@ async def actualizar_progreso(progress_bar, estado_label, queue: Queue):
                 estado_label.text = f"⏳ {data}"  # Mostrar mensaje de estado
             elif msg_type == 'info':
                 info[msg_type] = data
-                estado_label.text = f"ℹ️ {data}"
+                estado_label.text = f"🔄 Traduciendo..."
             elif msg_type == 'traduccion':
                 estado_label.text = "🔄 Traduciendo..."
             elif msg_type in ['success', 'error']:
