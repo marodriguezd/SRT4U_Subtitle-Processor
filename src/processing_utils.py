@@ -120,22 +120,31 @@ def procesar_archivo_srt(archivo_srt: str, traducir: bool, idioma_destino: str,
         total_bloques = len(bloques)
         bloques_procesados = 0
 
-        for bloque in bloques:
-            bloque_texto = "\n".join(bloque)
+        chunk_size = 10
+        num_chunks = (total_bloques + chunk_size - 1) // chunk_size  # Calculate the number of chunks
+
+        for i in range(num_chunks):
+            start = i * chunk_size
+            end = min(start + chunk_size, total_bloques)
+            chunk = bloques[start:end]
+
+            chunk_text = "\n".join(["\n".join(bloque) for bloque in chunk])
 
             if traducir:
                 try:
-                    bloque_texto = traducir_texto(bloque_texto, idioma_destino)
-                    bloque = bloque_texto.split('\n')
+                    chunk_text = traducir_texto(chunk_text, idioma_destino)
+                    translated_bloques = dividir_en_bloques(chunk_text, progress_callback)
                 except Exception as e:
                     if progress_callback:
-                        progress_callback('error', f"Error traduciendo bloque: {str(e)}")
-                    continue
+                        progress_callback('error', f"Error traduciendo chunk {i+1}: {str(e)}")
+                    translated_bloques = chunk  # Use the original chunk if translation fails
+            else:
+                translated_bloques = chunk
 
-            texto_procesado.extend(bloque)
+            texto_procesado.extend(["\n".join(bloque) for bloque in translated_bloques])
 
             # Actualizar progreso
-            bloques_procesados += 1
+            bloques_procesados += len(chunk)
             if progress_callback:
                 progress = (bloques_procesados / total_bloques) * 0.9  # 90% del progreso total
                 progress_callback('progress', progress)
