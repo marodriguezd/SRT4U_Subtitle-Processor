@@ -100,28 +100,45 @@ def procesar_archivo_srt(archivo_srt: str, traducir: bool, idioma_destino: str,
         texto_procesado = []
         subtitulos_procesados = 0
 
+        bloques = []
+        bloque_actual = []
+
         for linea in lineas:
             # Eliminar contenido de spam
             linea = eliminar_spam(linea)
 
             if linea.strip():
-                # Traducir si es necesario y si no es un número de subtítulo ni una marca de tiempo
-                if traducir and not linea.strip().isdigit() and not '-->' in linea:
-                    try:
-                        linea = traducir_texto(linea, idioma_destino)
-                    except Exception as e:
-                        if progress_callback:
-                            progress_callback('error', f"Error traduciendo línea: {str(e)}")
-                        continue
+                if linea.strip().isdigit() or '-->' in linea:
+                    if bloque_actual:
+                        bloques.append(bloque_actual)
+                        bloque_actual = []
+                bloque_actual.append(linea)
 
-                texto_procesado.append(linea)
+        if bloque_actual:
+            bloques.append(bloque_actual)
 
-                # Actualizar progreso si se procesa un número de subtítulo
-                if linea.strip().isdigit():
-                    subtitulos_procesados += 1
+        total_bloques = len(bloques)
+        bloques_procesados = 0
+
+        for bloque in bloques:
+            bloque_texto = "\n".join(bloque)
+
+            if traducir:
+                try:
+                    bloque_texto = traducir_texto(bloque_texto, idioma_destino)
+                    bloque = bloque_texto.split('\n')
+                except Exception as e:
                     if progress_callback:
-                        progress = (subtitulos_procesados / total_subtitulos) * 0.5  # 50% del progreso total
-                        progress_callback('progress', progress)
+                        progress_callback('error', f"Error traduciendo bloque: {str(e)}")
+                    continue
+
+            texto_procesado.extend(bloque)
+
+            # Actualizar progreso
+            bloques_procesados += 1
+            if progress_callback:
+                progress = (bloques_procesados / total_bloques) * 0.9  # 90% del progreso total
+                progress_callback('progress', progress)
 
         # Agregar líneas vacías antes de los números de subtítulo
         texto_procesado_con_saltos = []
@@ -132,7 +149,7 @@ def procesar_archivo_srt(archivo_srt: str, traducir: bool, idioma_destino: str,
                 texto_procesado_con_saltos.append(linea)
 
         if progress_callback:
-            progress_callback('progress', 0.6)  # 60% completado
+            progress_callback('progress', 1.0)  # 100% completado
 
         return "\n".join(texto_procesado_con_saltos)
 
