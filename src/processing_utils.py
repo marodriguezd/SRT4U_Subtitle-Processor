@@ -1,3 +1,4 @@
+import os
 import re
 from deep_translator import GoogleTranslator
 from typing import List, Callable
@@ -19,33 +20,14 @@ SPAM_PATTERNS = [
 
 
 def eliminar_spam(texto: str) -> str:
-    """Elimina cualquier contenido no deseado o spam del texto según los patrones definidos
-
-    Args:
-        texto (str): El texto a procesar.
-
-    Returns:
-        str: Texto limpio de cualquier patrón coincidente de spam.
-    """
+    """Elimina cualquier contenido no deseado o spam del texto según los patrones definidos."""
     for patron in SPAM_PATTERNS:
         texto = re.sub(patron, "", texto, flags=re.IGNORECASE)
     return texto
 
 
 def traducir_texto(texto: str, idioma_destino: str, progress_callback: Callable = None) -> str:
-    """Traduce un texto al idioma especificado utilizando Google Translator.
-
-    Args:
-        texto (str): Texto a traducir.
-        idioma_destino (str): Código del idioma al que se desea traducir.
-        progress_callback (Callable, opcional): Función de callback para informar progreso.
-
-    Returns:
-        str: Texto traducido.
-
-    Raises:
-        Exception: Si ocurre un error durante la traducción.
-    """
+    """Traduce un texto al idioma especificado utilizando Google Translator."""
     try:
         translator = GoogleTranslator(source="auto", target=idioma_destino)
         traduccion = translator.translate(texto)
@@ -59,33 +41,13 @@ def traducir_texto(texto: str, idioma_destino: str, progress_callback: Callable 
 
 
 def contar_subtitulos(texto: str) -> int:
-    """Cuenta el número total de subtítulos en un archivo de subtítulos.
-
-    Args:
-        texto (str): El contenido del archivo de subtítulos.
-
-    Returns:
-        int: Número de subtítulos presentes.
-    """
+    """Cuenta el número total de subtítulos en un archivo de subtítulos."""
     return len([line for line in texto.split('\n') if line.strip().isdigit()])
 
 
 def procesar_archivo_srt(archivo_srt: str, traducir: bool, idioma_destino: str,
                          progress_callback: Callable = None) -> str:
-    """Procesa un archivo SRT, eliminando spam y traduciendo subtítulos si es necesario.
-
-    Args:
-        archivo_srt (str): Ruta del archivo SRT.
-        traducir (bool): Indica si se debe traducir el contenido.
-        idioma_destino (str): Código del idioma al que se desea traducir.
-        progress_callback (Callable, opcional): Función para manejar actualizaciones de progreso.
-
-    Returns:
-        str: Contenido procesado del archivo SRT.
-
-    Raises:
-        Exception: Si ocurre un error durante el procesamiento.
-    """
+    """Procesa un archivo SRT, eliminando spam y traduciendo subtítulos si es necesario."""
     try:
         # Leer contenido del archivo
         with open(archivo_srt, "r", encoding='UTF-8') as f:
@@ -99,14 +61,12 @@ def procesar_archivo_srt(archivo_srt: str, traducir: bool, idioma_destino: str,
         lineas = contenido.split('\n')
         texto_procesado = []
         subtitulos_procesados = 0
-
         bloques = []
         bloque_actual = []
 
         for linea in lineas:
             # Eliminar contenido de spam
             linea = eliminar_spam(linea)
-
             if linea.strip():
                 if linea.strip().isdigit() or '-->' in linea:
                     if bloque_actual:
@@ -119,7 +79,6 @@ def procesar_archivo_srt(archivo_srt: str, traducir: bool, idioma_destino: str,
 
         total_bloques = len(bloques)
         bloques_procesados = 0
-
         chunk_size = 10
         num_chunks = (total_bloques + chunk_size - 1) // chunk_size  # Calculate the number of chunks
 
@@ -127,7 +86,6 @@ def procesar_archivo_srt(archivo_srt: str, traducir: bool, idioma_destino: str,
             start = i * chunk_size
             end = min(start + chunk_size, total_bloques)
             chunk = bloques[start:end]
-
             chunk_text = "\n".join(["\n".join(bloque) for bloque in chunk])
 
             if traducir:
@@ -136,7 +94,7 @@ def procesar_archivo_srt(archivo_srt: str, traducir: bool, idioma_destino: str,
                     translated_bloques = dividir_en_bloques(chunk_text, progress_callback)
                 except Exception as e:
                     if progress_callback:
-                        progress_callback('error', f"Error traduciendo chunk {i+1}: {str(e)}")
+                        progress_callback('error', f"Error traduciendo chunk {i + 1}: {str(e)}")
                     translated_bloques = chunk  # Use the original chunk if translation fails
             else:
                 translated_bloques = chunk
@@ -161,7 +119,6 @@ def procesar_archivo_srt(archivo_srt: str, traducir: bool, idioma_destino: str,
             progress_callback('progress', 1.0)  # 100% completado
 
         return "\n".join(texto_procesado_con_saltos)
-
     except Exception as e:
         if progress_callback:
             progress_callback('error', str(e))
@@ -169,15 +126,7 @@ def procesar_archivo_srt(archivo_srt: str, traducir: bool, idioma_destino: str,
 
 
 def dividir_en_bloques(texto_procesado: str, progress_callback: Callable = None) -> List[List[str]]:
-    """Divide el texto procesado en bloques basados en números de subtítulo.
-
-    Args:
-        texto_procesado (str): Texto que ya ha sido procesado.
-        progress_callback (Callable, opcional): Función de callback para informar progreso.
-
-    Returns:
-        List[List[str]]: Lista de bloques de subtítulos.
-    """
+    """Divide el texto procesado en bloques basados en números de subtítulo."""
     try:
         bloques = []
         bloque_actual = []
@@ -211,27 +160,16 @@ def dividir_en_bloques(texto_procesado: str, progress_callback: Callable = None)
 
 
 def procesar_bloques(bloques: List[List[str]], progress_callback: Callable = None) -> List[List[str]]:
-    """Realiza ajustes adicionales en los bloques de subtítulos, como combinar bloques incompletos.
-
-    Args:
-        bloques (List[List[str]]): Lista de bloques a procesar.
-        progress_callback (Callable, opcional): Función para manejar actualizaciones de progreso.
-
-    Returns:
-        List[List[str]]: Lista de bloques procesados.
-    """
+    """Realiza ajustes adicionales en los bloques de subtítulos, como combinar bloques incompletos."""
     try:
         total_bloques = len(bloques)
         for i, bloque in enumerate(bloques):
             if len(bloque) < 3 and i + 1 < len(bloques):
                 bloque_sin_texto = bloque
                 bloque_siguiente = bloques[i + 1]
-
                 tiempo_completo = bloque_sin_texto[1].split("-->")[0] + "-->" + bloque_siguiente[1].split("-->")[1]
                 bloque_siguiente[1] = tiempo_completo
-
                 bloques.pop(i)
-
             if progress_callback:
                 progress = 0.8 + ((i / total_bloques) * 0.1)  # 80-90% del progreso
                 progress_callback('progress', progress)
@@ -244,15 +182,7 @@ def procesar_bloques(bloques: List[List[str]], progress_callback: Callable = Non
 
 
 def devolver_formato(bloques: List[List[str]], progress_callback: Callable = None) -> str:
-    """Convierte los bloques de subtítulos procesados nuevamente en un formato de texto.
-
-    Args:
-        bloques (List[List[str]]): Lista de bloques de subtítulos.
-        progress_callback (Callable, opcional): Función de callback para manejar el progreso.
-
-    Returns:
-        str: El texto formateado en su estructura original.
-    """
+    """Convierte los bloques de subtítulos procesados nuevamente en un formato de texto."""
     try:
         texto_final = ""
         total_bloques = len(bloques)
@@ -274,3 +204,41 @@ def devolver_formato(bloques: List[List[str]], progress_callback: Callable = Non
         if progress_callback:
             progress_callback('error', str(e))
         raise
+
+
+def vtt_to_srt(vtt_file_path, srt_file_path):
+    with open(vtt_file_path, 'r', encoding='utf-8') as vtt_file:
+        lines = vtt_file.readlines()
+
+    # Remove the WEBVTT line and any other header lines
+    while lines and lines[0].strip().upper() == 'WEBVTT':
+        lines.pop(0)
+
+    # Process the remaining lines
+    srt_lines = []
+    subtitle_number = 1
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        if '-->' in line:  # Time format line
+            # Convert VTT time format to SRT time format if necessary
+            start_time, _, end_time = line.partition(' --> ')
+            start_time = start_time.replace('.', ',', 1)
+            end_time = end_time.replace('.', ',', 1)
+            srt_lines.append(f"{subtitle_number}\n")
+            srt_lines.append(f"{start_time} --> {end_time}\n")
+            subtitle_number += 1
+            i += 1
+            # Collect all lines of the subtitle text
+            subtitle_text = []
+            while i < len(lines) and '-->' not in lines[i].strip():
+                subtitle_text.append(lines[i].strip())
+                i += 1
+            srt_lines.append(' '.join(subtitle_text) + '\n\n')
+        else:
+            i += 1
+
+    with open(srt_file_path, 'w', encoding='utf-8') as srt_file:
+        srt_file.writelines(srt_lines)
+
+    return srt_file_path

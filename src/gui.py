@@ -7,6 +7,7 @@ from nicegui import ui
 
 import file_handling
 import processing
+import processing_utils  # Import processing_utils to use vtt_to_srt
 
 
 class App:
@@ -17,18 +18,18 @@ class App:
 
     def create_ui(self):
         with ui.card().classes('w-full max-w-3xl mx-auto p-4'):
-            ui.label('SRT4U - Procesa subtítulos SRT').classes('text-xl mb-4')
+            ui.label('SRT4U - Procesa subtítulos SRT/VTT').classes('text-xl mb-4')
             ui.label('Traduce a otros idiomas y/o limpia spam manteniendo el idioma original').classes(
                 'text-sm text-gray-600 mb-4')
 
             # Selección de archivo
             with ui.column().classes('w-full gap-2'):
                 ui.upload(
-                    label='Seleccione el archivo SRT',
+                    label='Seleccione el archivo SRT/VTT',
                     max_files=1,
                     auto_upload=True,
                     on_upload=self.on_upload
-                ).props('accept=.srt')
+                ).props('accept=.srt,.vtt')
                 self.archivo_label = ui.label('Ningún archivo seleccionado').classes('text-sm text-gray-600')
 
             # Selección de directorio de destino
@@ -104,6 +105,12 @@ class App:
 
             # Crear cola para comunicación entre hilos
             queue = Queue()
+
+            # Convertir archivo VTT a SRT si es necesario
+            if self.archivo_srt_path.lower().endswith('.vtt'):
+                srt_file_path = os.path.splitext(self.archivo_srt_path)[0] + '.srt'
+                processing_utils.vtt_to_srt(self.archivo_srt_path, srt_file_path)  # Use vtt_to_srt from processing_utils
+                self.archivo_srt_path = srt_file_path
 
             # Iniciar proceso en un hilo separado
             thread = Thread(
