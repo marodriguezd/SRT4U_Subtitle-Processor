@@ -1,3 +1,4 @@
+# src/processing_utils.py (1-305)
 import os
 import re
 from deep_translator import GoogleTranslator
@@ -221,7 +222,9 @@ def vtt_to_srt(vtt_file_path, srt_file_path):
     while i < len(lines):
         line = lines[i].strip()
         if '-->' in line:  # Time format line
-            # Convert VTT time format to SRT time format if necessary
+            # src/processing_utils.py (continued)
+
+            # Convert VTT time format to SRT time format
             start_time, _, end_time = line.partition(' --> ')
             start_time = start_time.replace('.', ',', 1)
             end_time = end_time.replace('.', ',', 1)
@@ -242,3 +245,37 @@ def vtt_to_srt(vtt_file_path, srt_file_path):
         srt_file.writelines(srt_lines)
 
     return srt_file_path
+
+
+def srt_to_vtt(srt_file_path, vtt_file_path):
+    with open(srt_file_path, 'r', encoding='utf-8') as srt_file:
+        lines = srt_file.readlines()
+
+    vtt_lines = ['WEBVTT\n\n']
+    subtitle_number = 1
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        if line.isdigit():  # Subtitle number line
+            i += 1
+            if i < len(lines):
+                time_line = lines[i].strip()
+                # Convert SRT time format to VTT time format
+                start_time, _, end_time = time_line.partition(' --> ')
+                start_time = start_time.replace(',', '.', 1)
+                end_time = end_time.replace(',', '.', 1)
+                vtt_lines.append(f"{start_time} --> {end_time}\n")
+                i += 1
+                # Collect all lines of the subtitle text
+                subtitle_text = []
+                while i < len(lines) and lines[i].strip():
+                    subtitle_text.append(lines[i].strip())
+                    i += 1
+                vtt_lines.append(' '.join(subtitle_text) + '\n\n')
+        else:
+            i += 1
+
+    with open(vtt_file_path, 'w', encoding='utf-8') as vtt_file:
+        vtt_file.writelines(vtt_lines)
+
+    return vtt_file_path

@@ -1,3 +1,4 @@
+# src/gui.py (1-182)
 import asyncio
 import os
 from queue import Queue
@@ -14,6 +15,7 @@ class App:
     def __init__(self):
         self.archivo_srt_path = None
         self.directorio_destino = None
+        self.formato_salida = 'srt'  # Default format
         self.create_ui()
 
     def create_ui(self):
@@ -47,6 +49,15 @@ class App:
                     placeholder='es, en, fr, etc.'
                 ).props('outlined dense')
 
+            # Selección de formato de salida
+            with ui.row().classes('w-full items-center mt-2'):
+                ui.label('Formato de salida: ').classes('mr-2')
+                self.formato_salida_select = ui.select(
+                    options=['srt', 'vtt'],
+                    value='srt',
+                    on_change=self.on_formato_salida_change
+                ).props('outlined dense')
+
             # Barra de progreso y mensajes de estado
             self.progress = ui.linear_progress(value=0).classes('w-full mt-4')
             self.progress.visible = False
@@ -78,6 +89,9 @@ class App:
             self.directorio_label.text = 'Ningún directorio seleccionado'
             ui.notify(f'Error seleccionando directorio: {str(e)}', type='negative')
 
+    def on_formato_salida_change(self, e):
+        self.formato_salida = e.value
+
     async def procesar(self):
         # Validación de entrada: archivo
         if not self.archivo_srt_path:
@@ -106,11 +120,21 @@ class App:
             # Crear cola para comunicación entre hilos
             queue = Queue()
 
-            # Convertir archivo VTT a SRT si es necesario
-            if self.archivo_srt_path.lower().endswith('.vtt'):
+            # Determinar la extensión del archivo de entrada
+            _, archivo_extension = os.path.splitext(self.archivo_srt_path)
+            archivo_extension = archivo_extension.lower()[1:]  # Remove the leading dot
+
+            # Convertir archivo VTT a SRT si es necesario y si la salida debe ser SRT
+            if archivo_extension == 'vtt' and self.formato_salida == 'srt':
                 srt_file_path = os.path.splitext(self.archivo_srt_path)[0] + '.srt'
-                processing_utils.vtt_to_srt(self.archivo_srt_path, srt_file_path)  # Use vtt_to_srt from processing_utils
+                processing_utils.vtt_to_srt(self.archivo_srt_path, srt_file_path)
                 self.archivo_srt_path = srt_file_path
+
+            # Convertir archivo SRT a VTT si es necesario y si la salida debe ser VTT
+            elif archivo_extension == 'srt' and self.formato_salida == 'vtt':
+                vtt_file_path = os.path.splitext(self.archivo_srt_path)[0] + '.vtt'
+                processing_utils.srt_to_vtt(self.archivo_srt_path, vtt_file_path)
+                self.archivo_srt_path = vtt_file_path
 
             # Iniciar proceso en un hilo separado
             thread = Thread(
@@ -127,8 +151,8 @@ class App:
 
             # Crear nombre del archivo de salida y guardar el texto procesado
             nombre_original = os.path.basename(self.archivo_srt_path)
-            nombre_base, extension = os.path.splitext(nombre_original)
-            nombre_salida = f"{nombre_base}_procesado{extension}"
+            nombre_base, _ = os.path.splitext(nombre_original)
+            nombre_salida = f"{nombre_base}_procesado.{self.formato_salida}"  # Use the selected format
             output_path = os.path.join(self.directorio_destino, nombre_salida)
 
             with open(output_path, "w", encoding='UTF-8') as f:
