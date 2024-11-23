@@ -1,45 +1,57 @@
-# SRT4U - Procesa subtítulos SRT
-=====================================
+# SRT4U - Procesa subtítulos SRT/VTT  
+---
 
-## Traduce a otros idiomas y/o limpia spam manteniendo el idioma original
+## Traduce a otros idiomas, limpia spam y convierte entre formatos SRT y VTT  
 
-![Imagen de la interfaz de usuario](https://i.imgur.com/QemVmFk.png)
+![Imagen de la interfaz de usuario](https://i.imgur.com/Idf0Hn7.png)  
 
-## Funcionalidades
+## Funcionalidades  
 
-* Selecciona un archivo SRT para procesar
-* Selecciona un directorio de destino para guardar el archivo procesado
-* Opción para traducir el archivo a otro idioma
-* Opción para limpiar spam manteniendo el idioma original
-* Barra de progreso para visualizar el estado del proceso
-* Notificaciones para informar sobre el resultado del proceso
+- **Compatibilidad con formatos SRT y VTT**:  
+   - Importa y procesa archivos SRT y VTT.  
+   - Exporta subtítulos procesados en el formato que elijas (SRT o VTT).  
+- **Selección del formato de salida**:  
+   - Define si el archivo procesado se guarda en SRT o VTT.  
+- **Traducción de subtítulos**:  
+   - Traduce a múltiples idiomas manteniendo el formato original.  
+- **Limpieza de spam**:  
+   - Elimina automáticamente contenido no deseado de los subtítulos.  
+- **Interfaz intuitiva**:  
+   - Selección fácil de archivos y directorios.  
+   - Barra de progreso para visualizar el estado del proceso.  
+   - Notificaciones para informar sobre el éxito o errores.  
 
-## Uso
+## Uso  
 
-1. Selecciona un archivo SRT para procesar
-2. Selecciona un directorio de destino para guardar el archivo procesado
-3. Selecciona la opción para traducir el archivo a otro idioma (opcional)
-4. Ingresa el idioma destino (opcional)
-5. Haz clic en el botón "Procesar" para iniciar el proceso
-6. La barra de progreso mostrará el estado del proceso
-7. Una vez completado el proceso, se mostrará un mensaje de éxito o error
+1. Selecciona un archivo SRT o VTT para procesar.  
+2. Selecciona un directorio de destino para guardar el archivo procesado.  
+3. Opcional: Selecciona si deseas traducir el archivo y el idioma destino.  
+4. Elige el formato de salida (SRT o VTT).  
+5. Haz clic en el botón "Procesar" para iniciar el proceso.  
+6. Observa el progreso mediante la barra y las notificaciones.  
+7. Una vez completado, se guardará el archivo procesado en el directorio seleccionado.  
 
-## Requisitos
+## Requisitos  
 
-* Python 3.8
-* nicegui
-* deep_translator
+- Python 3.8 o superior.  
+- Dependencias:  
+  ```bash  
+  pip install nicegui deep_translator  
+  ```  
 
-## Instalación
+## Instalación  
 
-1. Instala las dependencias necesarias: `pip install nicegui deep_translator`
-2. Ejecuta el script: `python main.py`
+1. Clona el repositorio:  
+   ```bash  
+   git clone https://github.com/tu-usuario/SRT4U.git  
+   cd SRT4U  
+   ```  
+2. Ejecuta la aplicación:  
+   ```bash  
+   python main.py  
+   ```  
 
-## Créditos
+## Créditos  
 
-* Desarrollado por Miguel Ángel (con ayuda de IAs)
-* Licencia: Apache License 2.0
-
-## Notas
-
-* No se garantiza la compatibilidad con todos los sistemas operativos y versiones de Python.
+- Desarrollado por Miguel Ángel (con ayuda de IAs).  
+- Licencia: Apache License 2.0.  
