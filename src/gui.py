@@ -1,4 +1,3 @@
-# src/gui.py (1-182)
 import asyncio
 import os
 from queue import Queue
