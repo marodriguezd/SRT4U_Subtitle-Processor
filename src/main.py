@@ -1,5 +1,6 @@
-from gui import App
+# main.py
+from src.application.gui import SubtitleProcessorGUI
 
 if __name__ == '__main__':
-    app = App()
-    app.run(reload=False, port=12537)
+    processor = SubtitleProcessorGUI()
+    processor.run(reload=False, port=12537)
