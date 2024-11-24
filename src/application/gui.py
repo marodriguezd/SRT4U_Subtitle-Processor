@@ -163,6 +163,10 @@ class SubtitleProcessorGUI:
         output_filename = f"{name_without_ext}_processed.{self.output_format}"
         output_path = os.path.join(self.output_directory, output_filename)
 
+        # Add headline if the format is vtt
+        if self.output_format == "vtt":
+            content = f"WEBVTT\n\n{content}"
+
         with open(output_path, "w", encoding='UTF-8') as file:
             file.write(content)
 
