@@ -19,6 +19,7 @@ class SubtitleService:
             r"online|courses|club",
             r"<font.*?>.*?</font>",
             r"\bjoinchat\b",
+            r"/[a-zA-Z0-9]{12}",  # Matches Telegram IDs like /ailxpXoW3JVjYzQ1
         ]
         self.batch_size = batch_size
 
