@@ -92,11 +92,23 @@ class SubtitleService:
 
     def _optimize_blocks(self, blocks: List[List[str]], progress_callback: Callable) -> List[List[str]]:
         optimized = []
+        current_index = 1
+
         for i, block in enumerate(blocks):
             if len(block) >= 3:
+                block[0] = str(current_index)
+
+                if optimized:
+                    previous_block = optimized[-1]
+                    previous_end_time = previous_block[1].split(' --> ')[1]
+
+                    current_start_time = block[1].split(' --> ')[0]
+                    if previous_end_time != current_start_time:
+                        block[1] = f"{previous_end_time} --> {block[1].split(' --> ')[1]}"
+
                 optimized.append(block)
-            progress = 0.5 + (i + 1) / len(blocks) * 0.3
-            progress_callback('progress', progress)
+                current_index += 1
+
         return optimized
 
     def _format_output(self, blocks: List[List[str]], progress_callback: Callable) -> str:
