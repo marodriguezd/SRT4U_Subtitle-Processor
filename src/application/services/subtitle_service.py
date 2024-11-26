@@ -20,7 +20,7 @@ class SubtitleService:
             r"<font.*?>.*?</font>",
             r"\bjoinchat\b",
             r"/[a-zA-Z0-9]{12}",  # Matches Telegram IDs like /ailxpXoW3JVjYzQ1
-            r"[a-zA-Z0-9]{3,12}",  # Matches ID fragments of 3-12 characters
+            r"(?:^|\s)[A-Z][a-zA-Z0-9]{3,}Q[0-9](?:\s|$)",  # Matches ID fragments like YzQ1 more specifically
         ]
         self.batch_size = batch_size
 
