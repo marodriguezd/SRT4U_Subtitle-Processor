@@ -70,23 +70,62 @@ class SubtitleService:
     def _translate_blocks(self, blocks: List[List[str]], target_language: str,
                           progress_callback: Callable) -> List[List[str]]:
         translated_blocks = []
-        total_batches = (len(blocks) + self.batch_size - 1) // self.batch_size
+        current_batch_texts = []
+        current_batch_blocks = []  # Almacena el bloque original para reensamblarlo
+        current_length = 0
+        max_length = 5000  # Límite de caracteres por solicitud a la API
+        total_blocks = len(blocks)
+        processed_blocks = 0
 
-        for batch_index in range(total_batches):
-            start = batch_index * self.batch_size
-            end = min(start + self.batch_size, len(blocks))
-            batch = blocks[start:end]
-            batch_text = "\n\n".join("\n".join(block) for block in batch)
+        for block in blocks:
+            if len(block) < 3:
+                # Si el bloque no tiene línea de texto, lo dejamos intacto
+                translated_blocks.append(block)
+                processed_blocks += 1
+                continue
 
+            # Solo traducimos la parte textual (a partir de la tercera línea)
+            block_text = "\n".join(block[2:])
+            additional_length = len(block_text) + 2  # +2 para los separadores "\n\n"
+            if current_length + additional_length <= max_length:
+                current_batch_texts.append(block_text)
+                current_batch_blocks.append(block)
+                current_length += additional_length
+            else:
+                # Traducimos el batch acumulado
+                batch_text = "\n\n".join(current_batch_texts)
+                try:
+                    translated_text = self.translation_service.translate_text(batch_text, target_language)
+                    translated_batch = translated_text.split("\n\n")
+                    for orig_block, translated in zip(current_batch_blocks, translated_batch):
+                        translated_lines = translated.split("\n")
+                        new_block = [orig_block[0], orig_block[1]] + translated_lines
+                        translated_blocks.append(new_block)
+                except Exception as error:
+                    progress_callback('error', f"Translation error: {str(error)}")
+                    translated_blocks.extend(current_batch_blocks)
+                processed_blocks += len(current_batch_blocks)
+                progress_callback('progress', processed_blocks / total_blocks * 0.5)
+                # Reiniciamos el batch y añadimos el bloque actual
+                current_batch_texts = [block_text]
+                current_batch_blocks = [block]
+                current_length = additional_length
+
+        # Procesamos el último batch
+        if current_batch_texts:
+            batch_text = "\n\n".join(current_batch_texts)
             try:
                 translated_text = self.translation_service.translate_text(batch_text, target_language)
                 translated_batch = translated_text.split("\n\n")
-                translated_blocks.extend([translated_block.split('\n') for translated_block in translated_batch])
-                progress = (batch_index + 1) / total_batches * 0.5
-                progress_callback('progress', progress)
+                for orig_block, translated in zip(current_batch_blocks, translated_batch):
+                    translated_lines = translated.split("\n")
+                    new_block = [orig_block[0], orig_block[1]] + translated_lines
+                    translated_blocks.append(new_block)
             except Exception as error:
                 progress_callback('error', f"Translation error: {str(error)}")
-                translated_blocks.extend(batch)
+                translated_blocks.extend(current_batch_blocks)
+            processed_blocks += len(current_batch_blocks)
+            progress_callback('progress', processed_blocks / total_blocks * 0.5)
 
         return translated_blocks
 
@@ -95,19 +134,34 @@ class SubtitleService:
         current_index = 1
 
         for i, block in enumerate(blocks):
-            if len(block) >= 3:
-                block[0] = str(current_index)
+            # Verifica que el bloque tenga al menos la numeración, la línea de tiempo y alguna línea de texto.
+            if len(block) < 3:
+                continue
+            # Verifica que la línea de tiempo contenga el separador esperado.
+            if " --> " not in block[1]:
+                continue
 
-                if optimized:
-                    previous_block = optimized[-1]
-                    previous_end_time = previous_block[1].split(' --> ')[1]
+            block[0] = str(current_index)
 
-                    current_start_time = block[1].split(' --> ')[0]
-                    if previous_end_time != current_start_time:
-                        block[1] = f"{previous_end_time} --> {block[1].split(' --> ')[1]}"
+            if optimized:
+                previous_block = optimized[-1]
+                if len(previous_block) > 1 and " --> " in previous_block[1]:
+                    previous_parts = previous_block[1].split(' --> ')
+                    if len(previous_parts) >= 2:
+                        previous_end_time = previous_parts[1]
+                    else:
+                        previous_end_time = None
+                else:
+                    previous_end_time = None
 
-                optimized.append(block)
-                current_index += 1
+                if previous_end_time and " --> " in block[1]:
+                    current_parts = block[1].split(' --> ')
+                    if len(current_parts) >= 2:
+                        current_start_time = current_parts[0]
+                        if previous_end_time != current_start_time:
+                            block[1] = f"{previous_end_time} --> {current_parts[1]}"
+            optimized.append(block)
+            current_index += 1
 
         return optimized
 

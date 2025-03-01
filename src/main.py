@@ -1,5 +1,5 @@
 # main.py
-from src.application.gui import SubtitleProcessorGUI
+from application.gui import SubtitleProcessorGUI
 
 if __name__ == '__main__':
     processor = SubtitleProcessorGUI()
