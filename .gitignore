@@ -167,4 +167,4 @@ outputs/output.srt
 resources/example.srt
 resources/example_esp.srt
 resources
-src/icono.ico
+icon.ico
