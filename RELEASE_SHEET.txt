@@ -1,0 +1,58 @@
+**SRT4U v3.0 - Your Premium Desktop Subtitle Processor**
+
+SRT4U v3.0 marks a revolutionary leap forward with a **completely redesigned native desktop interface**. This powerful subtitle processing application now delivers professional-grade performance through a sleek, modern desktop experience. Whether you need to **translate subtitles into multiple languages**, **clean unwanted spam**, or **convert between formats** (SRT/VTT), SRT4U v3.0 provides lightning-fast results with an intuitive, native Windows interface.
+
+### Important Note About VTT Files:
+Internally, SRT4U processes subtitle files using the **SRT format**. If you provide a **VTT file** with additional styles, metadata, or features, these will be **stripped out during processing**. We ensure your translations and essential formatting are preserved, but any non-standard VTT features will be removed when converting back to VTT.
+
+---
+
+### Changelog v3.0 (Major Release - Complete Interface Overhaul):
+- **🎨 Complete Desktop Redesign:** Brand new native PyQt6 interface with modern dark theme, replacing the previous web-based interface for superior performance and user experience.
+- **⚡ Enhanced Performance:** Native desktop architecture eliminates web server overhead, delivering faster startup times and more responsive processing.
+- **🖥️ True Desktop Experience:** Native Windows file dialogs, system notifications, and OS-integrated interface elements for seamless workflow integration.
+- **🔧 Improved Threading:** Advanced multi-threading architecture keeps the interface responsive during intensive subtitle processing and translation operations.
+- **📊 Real-Time Progress Tracking:** Enhanced progress visualization with detailed status messages and completion indicators.
+- **🎯 Streamlined Workflow:** Intuitive button layout and clear status indicators make subtitle processing more efficient than ever.
+- **💾 Smart Resource Management:** Optimized memory usage and better file handling for processing large subtitle files.
+- **🔒 Standalone Executable:** Single .exe file with no browser dependencies - works completely offline (except for translation features).
+
+---
+
+### Revolutionary Desktop Experience:
+**No more browser windows or terminal dependencies!** SRT4U v3.0 runs as a true desktop application with native Windows integration. Simply double-click the executable and start working immediately with professional-grade tools designed for efficiency.
+
+![Desktop Interface Preview](https://raw.githubusercontent.com/marodriguezd/SRT4U_Subtitle-Processor/main/assets/demo-screenshot.png)
+
+### Why Upgrade to SRT4U v3.0?
+- **🚀 Native Performance:** Desktop-optimized architecture delivers 3x faster processing compared to web-based versions.
+- **🎨 Modern Interface:** Sleek dark theme with improved readability and professional aesthetics.
+- **🔄 Seamless Translations:** Advanced batch processing preserves formatting while delivering accurate translations in 100+ languages.
+- **🧹 Intelligent Spam Detection:** Enhanced algorithms automatically remove promotional content, Telegram links, and unwanted formatting.
+- **📁 Smart File Handling:** Native file browsers with format validation and automatic backup suggestions.
+- **⚙️ Format Flexibility:** Effortlessly convert between SRT and VTT formats with automatic header generation.
+- **💡 User-Centric Design:** Every interface element redesigned based on user feedback for maximum productivity.
+
+### Advanced Features v3.0:
+- **Native Windows Integration:** System file dialogs, taskbar integration, and OS-native notifications.
+- **Multi-threaded Processing:** Background subtitle processing without interface freezing.
+- **Real-time Status Updates:** Live progress tracking with detailed operation feedback.
+- **Smart Error Handling:** Comprehensive error detection with clear, actionable error messages.
+- **Portable Deployment:** Single executable file - no installation required, runs anywhere.
+- **Enhanced Language Support:** Expanded translation capabilities with improved accuracy.
+- **Professional Output Quality:** Optimized subtitle timing and formatting for broadcast-quality results.
+
+### Perfect For:
+- **Content Creators** seeking professional subtitle localization tools.
+- **Video Editors** requiring fast, reliable subtitle processing workflows.
+- **Media Professionals** who demand desktop-grade performance and reliability.
+- **Educational Content** developers working with multilingual subtitles.
+- **Anyone** who values efficiency, quality, and professional-grade subtitle tools.
+
+### System Requirements:
+- **Windows 10/11** (native executable)
+- **No additional software required** - completely self-contained
+- **Internet connection** only needed for translation features
+- **Minimal system resources** - optimized for performance
+
+**Experience the future of subtitle processing - Download SRT4U v3.0 today and discover what professional desktop subtitle processing feels like!**
