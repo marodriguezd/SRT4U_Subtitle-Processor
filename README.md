@@ -198,25 +198,6 @@ If you prefer to run without cloning:
 
 ---
 
-## Project Structure
-
-```
-SRT4U-PyQt/
-├── main.py                    # Application entry point
-├── application/
-│   ├── __init__.py
-│   ├── gui.py                 # Main PyQt6 GUI
-│   └── services/
-│       ├── __init__.py
-│       ├── file_service.py    # File handling service
-│       ├── subtitle_service.py # Subtitle processing logic
-│       └── translation_service.py # Translation service
-├── requirements.txt           # Python dependencies
-└── README.md                  # This file
-```
-
----
-
 ## Advanced Features & Technical Details
 
 ### Subtitle Processing Pipeline
