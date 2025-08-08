@@ -15,14 +15,12 @@ class FileService:
         return temp_dir
 
     def save_uploaded_file(self, upload_event: Any) -> str:
-        """This method is not used in PyQt version but kept for compatibility"""
         temp_path = os.path.join(self.temp_directory, upload_event.name)
         with open(temp_path, 'wb') as file:
             shutil.copyfileobj(upload_event.content, file)
         return temp_path
 
     def get_output_directory(self) -> str:
-        """This method is not used in PyQt version but kept for compatibility"""
         import tkinter as tk
         from tkinter import filedialog
 
