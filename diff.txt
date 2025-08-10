@@ -1,0 +1,755 @@
+diff --git a/application/gui.py b/application/gui.py
+index 3b70b28..3212b98 100644
+--- a/application/gui.py
++++ b/application/gui.py
+@@ -1,15 +1,20 @@
+ # application/gui.py
++"""
++This module contains the main graphical user interface (GUI) for the SRT4U
++Subtitle Processor application, built using PyQt6.
++"""
+ import os
+ import sys
+ from queue import Queue
+ from threading import Thread
+ from typing import Optional
+-from PyQt6.QtWidgets import (QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, 
+-                             QLabel, QPushButton, QFileDialog, QCheckBox, 
+-                             QLineEdit, QComboBox, QProgressBar, QTextEdit,
+-                             QMessageBox, QFrame, QSizePolicy)
++
+ from PyQt6.QtCore import QTimer, pyqtSignal, QObject, Qt
+ from PyQt6.QtGui import QFont, QIcon
++from PyQt6.QtWidgets import (QMainWindow, QVBoxLayout, QHBoxLayout, QWidget,
++                             QLabel, QPushButton, QFileDialog, QCheckBox,
++                             QLineEdit, QComboBox, QProgressBar, QTextEdit,
++                             QMessageBox, QFrame, QSizePolicy)
+ 
+ from .services.file_service import FileService
+ from .services.subtitle_service import SubtitleService
+@@ -17,12 +22,22 @@ from .services.translation_service import TranslationService
+ 
+ 
+ class ProgressSignal(QObject):
+-    """Signal emitter for progress updates from worker thread"""
++    """
++    A QObject subclass that emits signals for progress updates from a worker thread.
++    This is used to safely update the GUI from a different thread.
++    """
+     progress_updated = pyqtSignal(str, object)
+ 
+ 
+ class SubtitleProcessorGUI(QMainWindow):
++    """
++    The main window of the application, handling user interactions and orchestrating
++    the subtitle processing workflow.
++    """
+     def __init__(self):
++        """
++        Initializes the main GUI window, sets up services, and connects signals.
++        """
+         super().__init__()
+         self.input_file_path: Optional[str] = None
+         self.output_directory: Optional[str] = None
+@@ -33,30 +48,33 @@ class SubtitleProcessorGUI(QMainWindow):
+         self.progress_queue = Queue()
+         self.timer = QTimer()
+         self.progress_signal = ProgressSignal()
+-        
++
+         # Connect signals
+         self.progress_signal.progress_updated.connect(self.handle_progress_update)
+         self.timer.timeout.connect(self.check_progress_queue)
+-        
++
+         self.setup_ui()
+ 
+     def setup_ui(self):
++        """
++        Sets up the user interface of the main window, including all widgets and layouts.
++        """
+         self.setWindowTitle('SRT4U - Subtitle Processor')
+         self.setGeometry(100, 100, 600, 500)
+         self.setMinimumSize(500, 450)
+-        
++
+         # Create central widget
+         central_widget = QWidget()
+         self.setCentralWidget(central_widget)
+-        
++
+         # Main layout
+         main_layout = QVBoxLayout()
+         central_widget.setLayout(main_layout)
+-        
++
+         # Add some padding
+         main_layout.setContentsMargins(20, 20, 20, 20)
+         main_layout.setSpacing(15)
+-        
++
+         # Title and description
+         title_label = QLabel('SRT4U - Subtitle Processor')
+         title_font = QFont()
+@@ -64,56 +82,56 @@ class SubtitleProcessorGUI(QMainWindow):
+         title_font.setBold(True)
+         title_label.setFont(title_font)
+         main_layout.addWidget(title_label)
+-        
++
+         description_label = QLabel('Translate and clean subtitles while preserving original timing')
+         description_label.setStyleSheet("color: #AAA; font-size: 11px;")
+         main_layout.addWidget(description_label)
+-        
++
+         # Separator
+         separator = QFrame()
+         separator.setFrameShape(QFrame.Shape.HLine)
+         separator.setFrameShadow(QFrame.Shadow.Sunken)
+         main_layout.addWidget(separator)
+-        
++
+         # File selection section
+         file_layout = QVBoxLayout()
+         self.select_file_button = QPushButton('Select SRT/VTT file')
+         self.select_file_button.clicked.connect(self.handle_file_selection)
+         file_layout.addWidget(self.select_file_button)
+-        
++
+         self.file_status = QLabel('No file selected')
+         self.file_status.setStyleSheet("color: #AAA; font-size: 11px;")
+         file_layout.addWidget(self.file_status)
+-        
++
+         main_layout.addLayout(file_layout)
+-        
++
+         # Output directory section
+         dir_layout = QVBoxLayout()
+         self.select_dir_button = QPushButton('Select output directory')
+         self.select_dir_button.clicked.connect(self.select_output_directory)
+         dir_layout.addWidget(self.select_dir_button)
+-        
++
+         self.directory_status = QLabel('No directory selected')
+         self.directory_status.setStyleSheet("color: #AAA; font-size: 11px;")
+         dir_layout.addWidget(self.directory_status)
+-        
++
+         main_layout.addLayout(dir_layout)
+-        
++
+         # Translation section
+         translation_layout = QVBoxLayout()
+-        
++
+         self.translation_toggle = QCheckBox('Enable translation')
+         translation_layout.addWidget(self.translation_toggle)
+-        
++
+         lang_layout = QHBoxLayout()
+         lang_layout.addWidget(QLabel('Target language:'))
+         self.target_language = QLineEdit()
+         self.target_language.setPlaceholderText('es, en, fr, etc.')
+         lang_layout.addWidget(self.target_language)
+         translation_layout.addLayout(lang_layout)
+-        
++
+         main_layout.addLayout(translation_layout)
+-        
++
+         # Output format selection
+         format_layout = QHBoxLayout()
+         format_layout.addWidget(QLabel('Output format:'))
+@@ -123,39 +141,43 @@ class SubtitleProcessorGUI(QMainWindow):
+         format_layout.addWidget(self.format_selector)
+         format_layout.addStretch()
+         main_layout.addLayout(format_layout)
+-        
++
+         # Progress section
+         self.progress_bar = QProgressBar()
+         self.progress_bar.setVisible(False)
+         main_layout.addWidget(self.progress_bar)
+-        
++
+         self.processing_status = QLabel('')
+         self.processing_status.setStyleSheet("color: #AAA; font-size: 11px;")
+         main_layout.addWidget(self.processing_status)
+-        
++
+         # Process button
+         self.process_button = QPushButton('Process')
+         self.process_button.setMinimumHeight(40)
+         self.process_button.clicked.connect(self.process_subtitle_file)
+         main_layout.addWidget(self.process_button)
+-        
++
+         # Result status
+         self.result_status = QLabel('')
+         self.result_status.setStyleSheet("font-size: 11px;")
+         self.result_status.setWordWrap(True)
+         main_layout.addWidget(self.result_status)
+-        
++
+         # Add stretch to push everything up
+         main_layout.addStretch()
+ 
+     def handle_file_selection(self):
++        """
++        Opens a file dialog to allow the user to select a subtitle file (.srt or .vtt).
++        Updates the GUI to reflect the selected file.
++        """
+         file_path, _ = QFileDialog.getOpenFileName(
+             self,
+             'Select SRT/VTT file',
+             '',
+             'Subtitle files (*.srt *.vtt);;All files (*.*)'
+         )
+-        
++
+         if file_path:
+             self.input_file_path = file_path
+             filename = os.path.basename(file_path)
+@@ -165,6 +187,10 @@ class SubtitleProcessorGUI(QMainWindow):
+             self.file_status.setText('No file selected')
+ 
+     def select_output_directory(self):
++        """
++        Opens a directory dialog for the user to select an output directory.
++        Updates the GUI to show the chosen directory.
++        """
+         self.directory_status.setText('Selecting directory...')
+         try:
+             directory = QFileDialog.getExistingDirectory(
+@@ -172,41 +198,57 @@ class SubtitleProcessorGUI(QMainWindow):
+                 'Select output directory',
+                 ''
+             )
+-            
++
+             if directory:
+                 self.output_directory = directory
+                 self.directory_status.setText(f'Output directory: {directory}')
+                 self.show_notification('Directory selected', 'positive')
+             else:
+                 self.directory_status.setText('No directory selected')
+-                
++
+         except Exception as error:
+             self.directory_status.setText('No directory selected')
+             self.show_notification(f'Directory selection error: {str(error)}', 'negative')
+ 
+-    def update_output_format(self, value):
++    def update_output_format(self, value: str):
++        """
++        Updates the selected output format when the user changes it in the QComboBox.
++
++        Args:
++            value (str): The new output format selected ('srt' or 'vtt').
++        """
+         self.output_format = value
+ 
+     def process_subtitle_file(self):
++        """
++        Starts the subtitle processing workflow. It validates inputs, prepares the UI,
++        and starts a new thread to handle the processing to avoid freezing the GUI.
++        """
+         if not self._validate_inputs():
+             return
+ 
+         try:
+             self._prepare_processing()
+-            
++
+             processing_thread = Thread(
+                 target=self._run_processing,
+                 args=(self.progress_queue,)
+             )
+             processing_thread.start()
+-            
+-            # Start timer to check progress
++
++            # Start a timer to periodically check the progress queue for updates.
+             self.timer.start(100)  # Check every 100ms
+ 
+         except Exception as error:
+             self._handle_error(error)
+ 
+     def _validate_inputs(self) -> bool:
++        """
++        Validates that all necessary inputs (file, directory, language) are provided.
++
++        Returns:
++            bool: True if all inputs are valid, False otherwise.
++        """
+         if not self.input_file_path:
+             self.show_notification('Please select a file', 'warning')
+             return False
+@@ -219,6 +261,9 @@ class SubtitleProcessorGUI(QMainWindow):
+         return True
+ 
+     def _prepare_processing(self):
++        """
++        Prepares the GUI for processing, disabling buttons and showing the progress bar.
++        """
+         self.process_button.setEnabled(False)
+         self.progress_bar.setVisible(True)
+         self.progress_bar.setValue(0)
+@@ -226,6 +271,13 @@ class SubtitleProcessorGUI(QMainWindow):
+         self.result_status.setText('')
+ 
+     def _run_processing(self, queue: Queue):
++        """
++        The target function for the worker thread. It calls the subtitle service
++        to process the file and puts the result or error into the queue.
++
++        Args:
++            queue (Queue): The queue to communicate with the main GUI thread.
++        """
+         try:
+             processed_text = self.subtitle_service.process_subtitles(
+                 self.input_file_path,
+@@ -238,7 +290,10 @@ class SubtitleProcessorGUI(QMainWindow):
+             queue.put(('error', str(error)))
+ 
+     def check_progress_queue(self):
+-        """Check for progress updates from worker thread"""
++        """
++        Periodically checks the progress queue for messages from the worker thread
++        and emits a signal to update the GUI.
++        """
+         try:
+             while True:
+                 msg_type, data = self.progress_queue.get_nowait()
+@@ -247,7 +302,14 @@ class SubtitleProcessorGUI(QMainWindow):
+             pass  # Queue is empty
+ 
+     def handle_progress_update(self, msg_type: str, data):
+-        """Handle progress updates in main thread"""
++        """
++        Handles progress updates received from the worker thread's signals.
++        Updates the progress bar, status labels, and handles success or error cases.
++
++        Args:
++            msg_type (str): The type of message (e.g., 'progress', 'status', 'success').
++            data: The data associated with the message.
++        """
+         if msg_type == 'progress':
+             progress_value = int(data * 100)
+             self.progress_bar.setValue(progress_value)
+@@ -263,12 +325,21 @@ class SubtitleProcessorGUI(QMainWindow):
+             self._handle_error(Exception(data))
+ 
+     def _save_processed_file(self, content: str) -> str:
++        """
++        Saves the processed subtitle content to a new file in the output directory.
++
++        Args:
++            content (str): The processed subtitle text.
++
++        Returns:
++            str: The path to the newly created output file.
++        """
+         base_name = os.path.basename(self.input_file_path)
+         name_without_ext = os.path.splitext(base_name)[0]
+         output_filename = f"{name_without_ext}_processed.{self.output_format}"
+         output_path = os.path.join(self.output_directory, output_filename)
+ 
+-        # Add headline if the format is vtt
++        # Add WEBVTT header if the format is vtt
+         if self.output_format == "vtt":
+             content = f"WEBVTT\n\n{content}"
+ 
+@@ -278,6 +349,12 @@ class SubtitleProcessorGUI(QMainWindow):
+         return output_path
+ 
+     def _handle_success(self, processed_text: str):
++        """
++        Handles the successful completion of the processing task.
++
++        Args:
++            processed_text (str): The final processed subtitle content.
++        """
+         try:
+             output_path = self._save_processed_file(processed_text)
+             self.processing_status.setText('Process completed')
+@@ -290,6 +367,12 @@ class SubtitleProcessorGUI(QMainWindow):
+             self._cleanup()
+ 
+     def _handle_error(self, error: Exception):
++        """
++        Handles any errors that occur during processing.
++
++        Args:
++            error (Exception): The exception that was raised.
++        """
+         self.processing_status.setText('Processing failed')
+         self.show_notification(f'Processing error: {str(error)}', 'negative')
+         self.result_status.setText(f'Error: {str(error)}')
+@@ -297,18 +380,31 @@ class SubtitleProcessorGUI(QMainWindow):
+         self._cleanup()
+ 
+     def _cleanup(self):
++        """
++        Performs cleanup actions after processing is finished (either success or error),
++        such as resetting the UI after a delay.
++        """
+         QTimer.singleShot(2000, self._reset_ui)  # Reset UI after 2 seconds
+ 
+     def _reset_ui(self):
++        """
++        Resets the user interface to its initial state after processing is complete.
++        """
+         self.process_button.setEnabled(True)
+         self.progress_bar.setVisible(False)
+         if self.processing_status.text() == 'Process completed':
+             self.processing_status.setText('')
+ 
+     def show_notification(self, message: str, notification_type: str):
+-        """Show notification using QMessageBox"""
++        """
++        Displays a notification to the user using a QMessageBox.
++
++        Args:
++            message (str): The message to display.
++            notification_type (str): The type of notification ('positive', 'negative', 'warning').
++        """
+         msg = QMessageBox()
+-        
++
+         if notification_type == 'positive':
+             msg.setIcon(QMessageBox.Icon.Information)
+             msg.setWindowTitle('Success')
+@@ -321,7 +417,7 @@ class SubtitleProcessorGUI(QMainWindow):
+         else:
+             msg.setIcon(QMessageBox.Icon.Information)
+             msg.setWindowTitle('Information')
+-            
++
+         msg.setText(message)
+         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+-        msg.exec()
+\ No newline at end of file
++        msg.exec()
+diff --git a/application/services/file_service.py b/application/services/file_service.py
+index f4e5b2b..c16f005 100644
+--- a/application/services/file_service.py
++++ b/application/services/file_service.py
+@@ -1,4 +1,8 @@
+ # application/services/file_service.py
++"""
++This module provides a service for handling file-related operations,
++such as creating temporary directories and managing file dialogs.
++"""
+ import os
+ import shutil
+ import tempfile
+@@ -6,23 +10,55 @@ from typing import Any
+ 
+ 
+ class FileService:
++    """
++    A service class for managing file operations.
++    """
+     def __init__(self):
++        """
++        Initializes the FileService and creates a temporary directory for use by the application.
++        """
+         self.temp_directory = self._create_temp_directory()
+ 
+     def _create_temp_directory(self) -> str:
++        """
++        Creates a dedicated temporary directory for the application.
++
++        Returns:
++            str: The absolute path to the created temporary directory.
++        """
+         temp_dir = os.path.join(tempfile.gettempdir(), 'srt4u')
+         os.makedirs(temp_dir, exist_ok=True)
+         return temp_dir
+ 
+     def save_uploaded_file(self, upload_event: Any) -> str:
+-        """This method is not used in PyQt version but kept for compatibility"""
++        """
++        Saves an uploaded file to the temporary directory.
++        Note: This method is kept for compatibility and is not used in the PyQt version.
++
++        Args:
++            upload_event (Any): An object representing the uploaded file, expected
++                                to have 'name' and 'content' attributes.
++
++        Returns:
++            str: The path to the saved temporary file.
++        """
+         temp_path = os.path.join(self.temp_directory, upload_event.name)
+         with open(temp_path, 'wb') as file:
+             shutil.copyfileobj(upload_event.content, file)
+         return temp_path
+ 
+     def get_output_directory(self) -> str:
+-        """This method is not used in PyQt version but kept for compatibility"""
++        """
++        Opens a system dialog to ask the user to select a directory.
++        Note: This method uses tkinter and is kept for compatibility, but the PyQt
++        version uses QFileDialog instead.
++
++        Returns:
++            str: The path to the selected directory.
++
++        Raises:
++            ValueError: If no directory is selected by the user.
++        """
+         import tkinter as tk
+         from tkinter import filedialog
+ 
+diff --git a/application/services/subtitle_service.py b/application/services/subtitle_service.py
+index c39f5e0..e522082 100644
+--- a/application/services/subtitle_service.py
++++ b/application/services/subtitle_service.py
+@@ -5,7 +5,19 @@ from .translation_service import TranslationService
+ 
+ 
+ class SubtitleService:
++    """
++    Service for processing subtitle files, including cleaning, translating,
++    and optimizing subtitle blocks.
++    """
++
+     def __init__(self, batch_size: int = 50):
++        """
++        Initializes the SubtitleService.
++
++        Args:
++            batch_size (int): The number of subtitle blocks to process in a batch
++                              for operations like translation.
++        """
+         self.translation_service = TranslationService()
+         self.spam_patterns = [
+             r"Subtitled by",
+@@ -25,6 +37,19 @@ class SubtitleService:
+ 
+     def process_subtitles(self, file_path: str, translate: bool, target_language: Optional[str],
+                           progress_callback: Callable) -> str:
++        """
++        Main method to process a subtitle file. It reads, cleans, translates (optional),
++        optimizes, and formats the subtitles.
++
++        Args:
++            file_path (str): The path to the subtitle file.
++            translate (bool): Whether to translate the subtitles.
++            target_language (Optional[str]): The target language for translation.
++            progress_callback (Callable): A function to call for progress updates.
++
++        Returns:
++            str: The processed subtitle content as a single string.
++        """
+         content = self._read_file(file_path)
+         
+         progress_callback('info', "Reading and parsing file...")
+@@ -45,18 +70,46 @@ class SubtitleService:
+         return self._format_output(subtitle_blocks, progress_callback)
+ 
+     def _read_file(self, file_path: str) -> str:
++        """
++        Reads the content of a file.
++
++        Args:
++            file_path (str): The path to the file.
++
++        Returns:
++            str: The content of the file.
++        """
+         with open(file_path, "r", encoding='UTF-8') as file:
+             return file.read()
+ 
+     def _clean_content(self, content: str) -> str:
++        """
++        Removes spam and unwanted patterns from the subtitle content.
++
++        Args:
++            content (str): The original subtitle content.
++
++        Returns:
++            str: The cleaned content.
++        """
+         cleaned = content
+         for pattern in self.spam_patterns:
+             cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE)
+         return cleaned
+ 
+     def _extract_blocks(self, content: str, progress_callback: Callable) -> List[List[str]]:
++        """
++        Extracts subtitle blocks from the content.
++
++        Args:
++            content (str): The subtitle content.
++            progress_callback (Callable): A function to call for progress updates.
++
++        Returns:
++            List[List[str]]: A list of subtitle blocks, where each block is a list of lines.
++        """
+         parsed_blocks = []
+-        # Primero, eliminar la cabecera VTT si existe, para no interferir con el parseo
++        # First, remove the VTT header if it exists, so it doesn't interfere with parsing.
+         if content.strip().startswith('WEBVTT'):
+             content = re.sub(r'WEBVTT.*?\n\s*\n', '', content, 1, flags=re.DOTALL | re.IGNORECASE)
+ 
+@@ -67,11 +120,11 @@ class SubtitleService:
+             if not lines:
+                 continue
+ 
+-            # Un bloque válido necesita al menos una línea de tiempo y una de texto.
++            # A valid block needs at least a timeline and a text line.
+             if len(lines) >= 2:
+                 if lines[0].isdigit():
+                     parsed_blocks.append(lines)
+-                # Asumimos que si no es un dígito, es la línea de tiempo.
++                # We assume that if it's not a digit, it's the timeline.
+                 elif '-->' in lines[0] or ' - ' in lines[0]:
+                     new_block = [str(len(parsed_blocks) + 1)] + lines
+                     parsed_blocks.append(new_block)
+@@ -80,6 +133,17 @@ class SubtitleService:
+ 
+     def _translate_blocks(self, blocks: List[List[str]], target_language: str,
+                           progress_callback: Callable) -> List[List[str]]:
++        """
++        Translates the text in each subtitle block.
++
++        Args:
++            blocks (List[List[str]]): The list of subtitle blocks.
++            target_language (str): The target language for translation.
++            progress_callback (Callable): A function to call for progress updates.
++
++        Returns:
++            List[List[str]]: The list of subtitle blocks with translated text.
++        """
+         translated_blocks = []
+         total_blocks = len(blocks)
+         progress_callback('status', 'Translating subtitles...')
+@@ -110,6 +174,16 @@ class SubtitleService:
+ 
+ 
+     def _optimize_blocks(self, blocks: List[List[str]], progress_callback: Callable) -> List[List[str]]:
++        """
++        Optimizes subtitle blocks by fixing timestamps and re-indexing.
++
++        Args:
++            blocks (List[List[str]]): The list of subtitle blocks.
++            progress_callback (Callable): A function to call for progress updates.
++
++        Returns:
++            List[List[str]]: The optimized list of subtitle blocks.
++        """
+         optimized = []
+         current_index = 1
+ 
+@@ -117,20 +191,20 @@ class SubtitleService:
+             if len(block) < 2:
+                 continue
+             
+-            # --- LA CORRECCIÓN ESTÁ AQUÍ ---
+-            # Hacemos la comprobación más flexible para aceptar "-->" o "-"
++            # --- START OF CORRECTION ---
++            # We make the check more flexible to accept "-->" or "-".
+             timestamp_line = block[1]
+             if "-->" not in timestamp_line and "-" not in timestamp_line:
+                 continue
+-            # --- FIN DE LA CORRECCIÓN ---
++            # --- END OF CORRECTION ---
+ 
+-            # Asegurarse de que el bloque tiene texto antes de procesarlo
++            # Make sure the block has text before processing it.
+             if len(block) < 3:
+                 continue
+                 
+             block[0] = str(current_index)
+             
+-            # Reemplazar el separador no estándar por el estándar SRT
++            # Replace the non-standard separator with the standard SRT separator.
+             timestamp_line = re.sub(r'\s+-\s+', ' --> ', timestamp_line)
+             block[1] = timestamp_line
+ 
+@@ -154,6 +228,16 @@ class SubtitleService:
+         return optimized
+ 
+     def _format_output(self, blocks: List[List[str]], progress_callback: Callable) -> str:
++        """
++        Formats the final list of subtitle blocks into a single string.
++
++        Args:
++            blocks (List[List[str]]): The list of subtitle blocks.
++            progress_callback (Callable): A function to call for progress updates.
++
++        Returns:
++            str: The formatted subtitle content.
++        """
+         formatted_content = []
+         total_blocks = len(blocks)
+         if total_blocks == 0:
+@@ -164,4 +248,4 @@ class SubtitleService:
+             formatted_content.append('')
+             progress = 0.8 + (i + 1) / total_blocks * 0.2
+             progress_callback('progress', progress)
+-        return '\n'.join(formatted_content)
+\ No newline at end of file
++        return '\n'.join(formatted_content)
+diff --git a/application/services/translation_service.py b/application/services/translation_service.py
+index c7e2ba9..e9970a6 100644
+--- a/application/services/translation_service.py
++++ b/application/services/translation_service.py
+@@ -1,11 +1,29 @@
+ # application/services/translation_service.py
+-from deep_translator import GoogleTranslator
++"""
++This module provides a service for translating text using the deep-translator library.
++"""
+ from typing import Callable, Optional
++from deep_translator import GoogleTranslator
+ 
+ 
+ class TranslationService:
++    """
++    A service class for handling text translation.
++    """
+     def translate_text(self, text: str, target_language: str,
+                        progress_callback: Optional[Callable] = None) -> str:
++        """
++        Translates a given text to a target language using Google Translate.
++
++        Args:
++            text (str): The text to be translated.
++            target_language (str): The language code of the target language (e.g., 'en', 'es').
++            progress_callback (Optional[Callable]): An optional callback function to
++                                                     be called with the translation result.
++
++        Returns:
++            str: The translated text.
++        """
+         translator = GoogleTranslator(source="auto", target=target_language)
+         translated_text = translator.translate(text)
+ 
+diff --git a/main.py b/main.py
+index 7c1dab9..09622fc 100644
+--- a/main.py
++++ b/main.py
+@@ -1,9 +1,18 @@
+ # main.py
+-from application.gui import SubtitleProcessorGUI
++"""
++This script is the main entry point for the SRT4U Subtitle Processor application.
++It initializes the PyQt6 application and displays the main GUI.
++"""
+ import sys
+ from PyQt6.QtWidgets import QApplication
++from application.gui import SubtitleProcessorGUI
+ 
+ if __name__ == '__main__':
++    """
++    Main execution block.
++    Initializes the QApplication, creates an instance of the SubtitleProcessorGUI,
++    shows the GUI, and starts the application's event loop.
++    """
+     app = QApplication(sys.argv)
+     processor = SubtitleProcessorGUI()
+     processor.show()
